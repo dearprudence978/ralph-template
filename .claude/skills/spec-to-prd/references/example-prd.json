@@ -1,0 +1,208 @@
+{
+  "project": "User Authentication",
+  "specId": "AUTH",
+  "branchName": "ralph/AUTH-user-authentication",
+  "description": "Complete user authentication system with email/password login, password reset, and session management",
+  "specFile": "specs/AUTH-user-authentication.md",
+  "userStories": [
+    {
+      "id": "AUTH-001",
+      "title": "Create User database schema",
+      "description": "Add User model to Prisma schema with email, password hash, and timestamps",
+      "category": "setup",
+      "acceptanceCriteria": [
+        "User model exists in prisma/schema.prisma",
+        "Fields: id (UUID), email (unique), passwordHash, createdAt, updatedAt",
+        "Migration runs successfully: npm run db:migrate",
+        "Prisma client regenerates without errors"
+      ],
+      "verificationCommands": [
+        "grep -q 'model User' prisma/schema.prisma",
+        "npm run db:migrate",
+        "npm run db:generate"
+      ],
+      "filesToModify": [
+        "prisma/schema.prisma"
+      ],
+      "dependsOn": [],
+      "priority": 1,
+      "complexity": "simple",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-002",
+      "title": "Implement password hashing service",
+      "description": "Create AuthService with methods for hashing and verifying passwords using bcrypt",
+      "category": "core",
+      "acceptanceCriteria": [
+        "AuthService class exists at src/services/auth.service.ts",
+        "hashPassword(password: string) returns bcrypt hash",
+        "verifyPassword(password: string, hash: string) returns boolean",
+        "Uses bcrypt with cost factor of 12",
+        "Unit tests pass with >90% coverage"
+      ],
+      "verificationCommands": [
+        "npm run typecheck",
+        "npm run test -- --grep 'AuthService'"
+      ],
+      "filesToModify": [
+        "src/services/auth.service.ts",
+        "src/services/auth.service.test.ts"
+      ],
+      "dependsOn": ["AUTH-001"],
+      "priority": 2,
+      "complexity": "simple",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-003",
+      "title": "Implement user registration",
+      "description": "Create registration endpoint that validates input, hashes password, and creates user",
+      "category": "api",
+      "acceptanceCriteria": [
+        "POST /api/auth/register endpoint exists",
+        "Validates email format and password strength (min 8 chars)",
+        "Returns 201 with user object (without password) on success",
+        "Returns 400 for invalid input with specific error messages",
+        "Returns 409 if email already exists",
+        "Password is hashed before storing"
+      ],
+      "verificationCommands": [
+        "npm run typecheck",
+        "npm run test -- --grep 'register'"
+      ],
+      "filesToModify": [
+        "src/routes/auth.routes.ts",
+        "src/controllers/auth.controller.ts",
+        "src/validators/auth.schema.ts"
+      ],
+      "dependsOn": ["AUTH-001", "AUTH-002"],
+      "priority": 3,
+      "complexity": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-004",
+      "title": "Implement user login",
+      "description": "Create login endpoint that verifies credentials and returns JWT token",
+      "category": "api",
+      "acceptanceCriteria": [
+        "POST /api/auth/login endpoint exists",
+        "Accepts email and password in request body",
+        "Returns 200 with JWT token on success",
+        "Returns 401 for invalid credentials (generic message)",
+        "JWT contains user id and email, expires in 7 days",
+        "Token is signed with JWT_SECRET from environment"
+      ],
+      "verificationCommands": [
+        "npm run typecheck",
+        "npm run test -- --grep 'login'"
+      ],
+      "filesToModify": [
+        "src/routes/auth.routes.ts",
+        "src/controllers/auth.controller.ts",
+        "src/services/auth.service.ts"
+      ],
+      "dependsOn": ["AUTH-002", "AUTH-003"],
+      "priority": 4,
+      "complexity": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-005",
+      "title": "Implement JWT authentication middleware",
+      "description": "Create middleware that validates JWT tokens and attaches user to request",
+      "category": "core",
+      "acceptanceCriteria": [
+        "authMiddleware function exists at src/middleware/auth.ts",
+        "Extracts token from Authorization header (Bearer scheme)",
+        "Validates token signature and expiration",
+        "Attaches decoded user to req.user",
+        "Returns 401 for missing/invalid/expired tokens"
+      ],
+      "verificationCommands": [
+        "npm run typecheck",
+        "npm run test -- --grep 'authMiddleware'"
+      ],
+      "filesToModify": [
+        "src/middleware/auth.ts",
+        "src/middleware/auth.test.ts",
+        "src/types/express.d.ts"
+      ],
+      "dependsOn": ["AUTH-004"],
+      "priority": 5,
+      "complexity": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-006",
+      "title": "Implement password reset request",
+      "description": "Create endpoint to request password reset, generating a time-limited token",
+      "category": "api",
+      "acceptanceCriteria": [
+        "POST /api/auth/forgot-password endpoint exists",
+        "Accepts email in request body",
+        "Generates secure random token (32 bytes hex)",
+        "Stores token hash in database with 1-hour expiration",
+        "Returns 200 regardless of email existence (security)",
+        "Logs token for development (would email in production)"
+      ],
+      "verificationCommands": [
+        "npm run typecheck",
+        "npm run test -- --grep 'forgot-password'"
+      ],
+      "filesToModify": [
+        "prisma/schema.prisma",
+        "src/routes/auth.routes.ts",
+        "src/controllers/auth.controller.ts",
+        "src/services/auth.service.ts"
+      ],
+      "dependsOn": ["AUTH-003"],
+      "priority": 6,
+      "complexity": "medium",
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "AUTH-007",
+      "title": "Implement password reset completion",
+      "description": "Create endpoint to reset password using valid token",
+      "category": "api",
+      "acceptanceCriteria": [
+        "POST /api/auth/reset-password endpoint exists",
+        "Accepts token and new password in request body",
+        "Validates token exists and hasn't expired",
+        "Updates user password with new hash",
+        "Invalidates the used token",
+        "Returns 200 on success, 400 for invalid/expired token"
+      ],
+      "verificationCommands": [
+        "npm run typecheck",
+        "npm run test -- --grep 'reset-password'"
+      ],
+      "filesToModify": [
+        "src/routes/auth.routes.ts",
+        "src/controllers/auth.controller.ts",
+        "src/services/auth.service.ts"
+      ],
+      "dependsOn": ["AUTH-006"],
+      "priority": 7,
+      "complexity": "medium",
+      "passes": false,
+      "notes": ""
+    }
+  ],
+  "globalSuccessCriteria": [
+    "All tests pass: npm run test",
+    "No linter errors: npm run lint",
+    "TypeScript compiles: npm run typecheck",
+    "Build succeeds: npm run build"
+  ],
+  "createdAt": "2026-01-14T08:00:00Z",
+  "updatedAt": "2026-01-14T08:00:00Z"
+}
