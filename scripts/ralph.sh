@@ -23,7 +23,7 @@ PROMPT_FILE=""
 MAX_ITERATIONS=0
 COMPLETION_PROMISE=""
 ITERATION=0
-WORK_DIR="$(pwd)"
+PROJECT_DIR="$(pwd)"
 
 print_usage() {
   cat << 'EOF'
@@ -167,6 +167,15 @@ while true; do
   # Create iteration-specific output file
   ITERATION_OUTPUT=".claude/ralph-logs/iteration_${RUN_ID}_${ITERATION}.txt"
   ITERATION_ERROR=".claude/ralph-logs/iteration_${RUN_ID}_${ITERATION}.err"
+
+  # WSL2 fix: Re-enter the project directory before each iteration
+  # This prevents "working directory was deleted" errors that occur
+  # when the directory inode changes between iterations
+  cd "$PROJECT_DIR" || {
+    echo -e "${RED}Failed to cd to project directory: $PROJECT_DIR${NC}"
+    log "Failed to cd to project directory"
+    exit 1
+  }
 
   # THE CORE OF RALPH: Fresh claude process each iteration
   # This is what provides true context isolation
