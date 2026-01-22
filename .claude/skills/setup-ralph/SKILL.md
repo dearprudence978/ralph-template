@@ -9,13 +9,15 @@ Install the Ralph autonomous development workflow into the current repository.
 
 ## What Gets Installed
 
-| Directory | Purpose |
-|-----------|---------|
+| Directory/File | Purpose |
+|----------------|---------|
 | `.claude/skills/spec-to-prd/` | Transform feature ideas into specs and PRDs |
 | `.claude/skills/run-phase/` | Execute PRD phases with context isolation |
 | `.claude/skills/close-phase/` | Verify completion and merge phases |
+| `.claude/settings.local.json` | Permissions for autonomous Ralph operation |
 | `scripts/ralph.sh` | Context-isolated iteration runner |
 | `ralph-specs/` | Directory structure for specs, docs, prompts |
+| `ralph-specs/WORKFLOW.md` | Quick reference guide |
 
 ## Prerequisites
 
@@ -81,13 +83,25 @@ curl -sL "$BASE_URL/$PATH" -o "$LOCAL_PATH" --create-dirs
 4. **ralph.sh script**:
    - `scripts/ralph.sh`
 
+5. **README (workflow reference)**:
+   - `ralph-specs/WORKFLOW.md` (downloaded from template README.md)
+
 ### Step 4: Set Permissions
 
 ```bash
 chmod +x scripts/ralph.sh
 ```
 
-### Step 5: Create Placeholder Files
+### Step 5: Download Workflow README
+
+Download the workflow reference guide:
+```bash
+curl -sL "$BASE_URL/README.md" -o "ralph-specs/WORKFLOW.md"
+```
+
+This gives users a quick refresher on how to use the Ralph workflow.
+
+### Step 6: Create Placeholder Files
 
 ```bash
 touch ralph-specs/specs/.gitkeep
@@ -95,7 +109,64 @@ touch ralph-specs/docs/.gitkeep
 touch ralph-specs/prompts/.gitkeep
 ```
 
-### Step 6: Verify Installation
+### Step 7: Create Settings File (if not exists)
+
+Check if `.claude/settings.local.json` exists. If not, create it with baseline permissions for Ralph:
+
+```bash
+if [ ! -f .claude/settings.local.json ]; then
+  # Create new settings file
+fi
+```
+
+**Create `.claude/settings.local.json` with this content:**
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/ralph.sh*)",
+      "Bash(make *)",
+      "Bash(npm *)",
+      "Bash(docker compose*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git branch*)",
+      "Bash(curl*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(git checkout development*)",
+      "Bash(git checkout main*)",
+      "Bash(git switch development*)",
+      "Bash(git switch main*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git branch -d development)",
+      "Bash(git branch -D development)",
+      "Bash(git branch -d main)",
+      "Bash(git branch -D main)"
+    ]
+  }
+}
+```
+
+**If the file already exists**, inform the user:
+```
+Settings file already exists at .claude/settings.local.json
+Please ensure these permissions are configured for Ralph to work:
+- allow: Bash(./scripts/ralph.sh*)
+- ask: Bash(git push*), Bash(git merge*), Bash(git checkout development/main*)
+```
+
+### Step 8: Verify Installation
 
 Run these checks:
 ```bash
@@ -103,34 +174,38 @@ test -f .claude/skills/spec-to-prd/SKILL.md && echo "spec-to-prd: OK"
 test -f .claude/skills/run-phase/SKILL.md && echo "run-phase: OK"
 test -f .claude/skills/close-phase/SKILL.md && echo "close-phase: OK"
 test -x scripts/ralph.sh && echo "ralph.sh: OK"
+test -f ralph-specs/WORKFLOW.md && echo "WORKFLOW.md: OK"
+test -f .claude/settings.local.json && echo "settings.local.json: OK"
 ```
 
-### Step 7: Print Success Message
+### Step 9: Print Success Message
 
 After successful installation, print:
 
 ```
 Ralph workflow installed successfully!
 
-Installed skills:
-  /spec-to-prd  - Create specifications and PRDs from feature ideas
-  /run-phase    - Execute PRD phases with git branching
-  /close-phase  - Verify and merge completed phases
+Installed:
+  Skills:
+    /spec-to-prd  - Create specifications and PRDs from feature ideas
+    /run-phase    - Execute PRD phases with git branching
+    /close-phase  - Verify and merge completed phases
+
+  Files:
+    scripts/ralph.sh          - Context-isolated iteration runner
+    ralph-specs/WORKFLOW.md   - Quick reference guide
+    .claude/settings.local.json - Permissions for autonomous operation
+
+Permissions configured:
+  ✓ Ralph loop can run autonomously
+  ✓ Git push/merge/checkout to main branches requires approval
+  ✓ Dangerous git operations (force push, hard reset) are blocked
 
 Next steps:
   1. Run /spec-to-prd to create your first specification
   2. The skill will guide you through discovery and PRD creation
   3. Use /run-phase <prd-file> to execute phases
   4. Use /close-phase <prd-file> to complete and merge
-
-Recommended: Add to .claude/settings.local.json:
-{
-  "permissions": {
-    "allow": [
-      "Bash(./scripts/ralph.sh:*)"
-    ]
-  }
-}
 ```
 
 ## Error Handling

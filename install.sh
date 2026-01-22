@@ -54,19 +54,70 @@ curl -sL "$REPO_URL/README.md" -o "ralph-specs/WORKFLOW.md"
 # Create .gitkeep files
 touch ralph-specs/specs/.gitkeep ralph-specs/docs/.gitkeep ralph-specs/prompts/.gitkeep
 
+# Create settings.local.json if it doesn't exist
+if [ ! -f ".claude/settings.local.json" ]; then
+    echo "Creating .claude/settings.local.json..."
+    cat > .claude/settings.local.json << 'SETTINGS'
+{
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/ralph.sh*)",
+      "Bash(make *)",
+      "Bash(npm *)",
+      "Bash(docker compose*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git branch*)",
+      "Bash(curl*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(git checkout development*)",
+      "Bash(git checkout main*)",
+      "Bash(git switch development*)",
+      "Bash(git switch main*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git branch -d development)",
+      "Bash(git branch -D development)",
+      "Bash(git branch -d main)",
+      "Bash(git branch -D main)"
+    ]
+  }
+}
+SETTINGS
+else
+    echo "Settings file already exists, skipping..."
+fi
+
 echo ""
 echo "Ralph workflow installed successfully!"
 echo ""
-echo "Installed skills:"
-echo "  /spec-to-prd  - Create specifications and PRDs from feature ideas"
-echo "  /run-phase    - Execute PRD phases with git branching"
-echo "  /close-phase  - Verify and merge completed phases"
+echo "Installed:"
+echo "  Skills:"
+echo "    /spec-to-prd  - Create specifications and PRDs from feature ideas"
+echo "    /run-phase    - Execute PRD phases with git branching"
+echo "    /close-phase  - Verify and merge completed phases"
+echo ""
+echo "  Files:"
+echo "    scripts/ralph.sh            - Context-isolated iteration runner"
+echo "    ralph-specs/WORKFLOW.md     - Quick reference guide"
+echo "    .claude/settings.local.json - Permissions for autonomous operation"
+echo ""
+echo "Permissions configured:"
+echo "  ✓ Ralph loop can run autonomously"
+echo "  ✓ Git push/merge/checkout to main branches requires approval"
+echo "  ✓ Dangerous git operations (force push, hard reset) are blocked"
 echo ""
 echo "Next steps:"
 echo "  1. Run /spec-to-prd to create your first specification"
 echo "  2. The skill will guide you through discovery and PRD creation"
 echo "  3. Use /run-phase <prd-file> to execute phases"
 echo "  4. Use /close-phase <prd-file> to complete and merge"
-echo ""
-echo "Recommended: Add to .claude/settings.local.json:"
-echo '  { "permissions": { "allow": ["Bash(./scripts/ralph.sh:*)"] } }'
