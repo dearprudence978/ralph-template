@@ -136,23 +136,37 @@ Think of it as a relay race - you run ONE leg, pass the baton, and a fresh runne
 
 5. Clear the Current Work section
 
-## AFTER COMPLETING ONE STORY - STOP AND SIGNAL
+## SIGNALS - OUTPUT ONE AND STOP
 
-**If more stories remain (some have passes=false):**
-Output this signal and STOP immediately:
+**After completing ONE story (more remain):**
 ```
 <story-complete>STORY_ID</story-complete>
 ```
 
-**If ALL stories now have passes=true:**
-Output this signal and STOP immediately:
+**When ALL stories have passes=true:**
 ```
 <promise>PHASE_COMPLETE</promise>
 ```
 
-Do NOT continue to the next story. A fresh iteration will pick it up.
+**When you need fresh context MID-STORY:**
+```
+<yield>Brief reason - what you tried, where you're stuck</yield>
+```
 
-This is a TRUTH statement - never output signals falsely." --max-iterations 30 --completion-promise "PHASE_COMPLETE"
+Use `<yield>` when:
+- You've tried multiple approaches without success
+- The story is complex and you've made partial progress
+- Context is getting long and you want fresh perspective
+- You're going in circles
+
+Before yielding:
+1. Update progress.txt 'Current Work' with what you've tried
+2. Commit any stable partial work
+3. Be specific about where you're stuck
+
+A fresh iteration will read your notes and continue.
+
+Do NOT continue after outputting any signal. STOP immediately." --max-iterations 30 --completion-promise "PHASE_COMPLETE"
 ```
 
 ### Step 2b: Execute Ralph Loop (Bash - Isolated)
@@ -215,19 +229,26 @@ Update progress.txt "Current Work" section with story ID, timestamp, and plan.
 2. If all pass: update PRD (`passes: true`), commit, update progress.txt
 3. Clear "Current Work" section
 
-## Completion Signals - STOP AFTER OUTPUTTING
+## Signals - OUTPUT ONE AND STOP
 
 **After completing ONE story (more stories remain):**
 ```
 <story-complete>STORY_ID</story-complete>
 ```
-Then STOP. Do not continue.
+Then STOP. Fresh context handles next story.
 
 **When ALL stories have `passes: true`:**
 ```
 <promise>PHASE_COMPLETE</promise>
 ```
-Then STOP. The phase is done.
+Then STOP. Phase is complete.
+
+**When stuck or need fresh context MID-STORY:**
+```
+<yield>What you tried, where you're stuck</yield>
+```
+Before yielding: update progress.txt with detailed notes, commit any stable partial work.
+Then STOP. Fresh context will read your notes and continue.
 
 Only output this when it is genuinely TRUE. Do not lie to exit the loop.
 ```
