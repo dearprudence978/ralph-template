@@ -166,19 +166,38 @@ while true; do
 
   # Create iteration-specific output file
   ITERATION_OUTPUT=".claude/ralph-logs/iteration_${RUN_ID}_${ITERATION}.txt"
+  ITERATION_ERROR=".claude/ralph-logs/iteration_${RUN_ID}_${ITERATION}.err"
 
   # THE CORE OF RALPH: Fresh claude process each iteration
   # This is what provides true context isolation
-  if cat "$PROMPT_FILE" | claude --print 2>&1 | tee "$ITERATION_OUTPUT"; then
+  #
+  # We capture stdout and stderr separately to prevent error messages
+  # from overwriting the completion promise output
+  CLAUDE_EXIT_CODE=0
+  claude -p "$(cat "$PROMPT_FILE")" > "$ITERATION_OUTPUT" 2> "$ITERATION_ERROR" || CLAUDE_EXIT_CODE=$?
+
+  # Show output to terminal
+  cat "$ITERATION_OUTPUT"
+
+  if [[ $CLAUDE_EXIT_CODE -eq 0 ]]; then
     log "Iteration $ITERATION completed successfully"
   else
-    log "Iteration $ITERATION exited with error (this is normal for Claude)"
+    log "Iteration $ITERATION exited with code $CLAUDE_EXIT_CODE (checking for completion anyway)"
+    # Show errors if any
+    if [[ -s "$ITERATION_ERROR" ]]; then
+      echo -e "${YELLOW}Stderr output:${NC}"
+      cat "$ITERATION_ERROR"
+    fi
   fi
 
-  # Read output and check for completion
+  # Read output and check for completion (check even if there was an error)
   OUTPUT=$(cat "$ITERATION_OUTPUT" 2>/dev/null || echo "")
 
-  if check_completion "$OUTPUT"; then
+  # Also check stderr in case the completion promise ended up there
+  ERROR_OUTPUT=$(cat "$ITERATION_ERROR" 2>/dev/null || echo "")
+  COMBINED_OUTPUT="$OUTPUT $ERROR_OUTPUT"
+
+  if check_completion "$COMBINED_OUTPUT"; then
     echo ""
     echo -e "${GREEN}✅ Completion promise detected: <promise>${COMPLETION_PROMISE}</promise>${NC}"
     echo -e "${GREEN}🎉 Ralph loop completed successfully after $ITERATION iterations!${NC}"
