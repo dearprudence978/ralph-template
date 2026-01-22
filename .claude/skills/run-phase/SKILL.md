@@ -64,11 +64,17 @@ Example: `prd-phase-1-infrastructure.json` → `feature/phase-1-infrastructure`
 
 You are part of a continuous development loop. Your job is to:
 1. Read progress.txt to understand what's done and what's next
-2. Make meaningful progress on ONE story
-3. Update progress.txt with what you did and what comes next
-4. Pass the baton to the next iteration
+2. Complete exactly ONE story (not more!)
+3. Update progress.txt with what you did
+4. Output a signal and STOP - let the next iteration handle the next story
 
-Think of it as a relay race - you're receiving context from past iterations and leaving clear notes for future ones.
+**CRITICAL: ONE STORY PER ITERATION**
+- Complete ONE story, then STOP
+- Do NOT start the next story in the same iteration
+- Output `<story-complete>STORY_ID</story-complete>` after finishing a story
+- Only output `<promise>PHASE_COMPLETE</promise>` when ALL stories pass
+
+Think of it as a relay race - you run ONE leg, pass the baton, and a fresh runner continues.
 
 ## BEFORE STARTING ANY STORY
 
@@ -128,16 +134,25 @@ Think of it as a relay race - you're receiving context from past iterations and 
    - Notes: [key implementation details]
    ```
 
-5. Clear the Current Work section or update to next story
+5. Clear the Current Work section
 
-## COMPLETION PROMISE
+## AFTER COMPLETING ONE STORY - STOP AND SIGNAL
 
-Output <promise>PHASE_COMPLETE</promise> ONLY when:
-- All stories in the PRD have passes=true
-- progress.txt Completed Stories section lists all story IDs
-- No unresolved items in Blockers section
+**If more stories remain (some have passes=false):**
+Output this signal and STOP immediately:
+```
+<story-complete>STORY_ID</story-complete>
+```
 
-This is a TRUTH statement - never output it falsely to exit the loop." --max-iterations 30 --completion-promise "PHASE_COMPLETE"
+**If ALL stories now have passes=true:**
+Output this signal and STOP immediately:
+```
+<promise>PHASE_COMPLETE</promise>
+```
+
+Do NOT continue to the next story. A fresh iteration will pick it up.
+
+This is a TRUTH statement - never output signals falsely." --max-iterations 30 --completion-promise "PHASE_COMPLETE"
 ```
 
 ### Step 2b: Execute Ralph Loop (Bash - Isolated)
@@ -167,6 +182,12 @@ You have NO memory of previous iterations. Before doing ANYTHING:
 
 3. **Check git log**: `git log --oneline -10`
 
+## CRITICAL: One Story Per Iteration
+
+**Complete exactly ONE story per iteration, then STOP.**
+
+Do NOT start the next story. A fresh context will handle it.
+
 ## Implementation Workflow
 
 ### Finding the Next Story
@@ -174,6 +195,8 @@ You have NO memory of previous iterations. Before doing ANYTHING:
 Look in the PRD for the first story where:
 - `passes: false`
 - All items in `dependsOn` have `passes: true`
+
+If "Current Work" in progress.txt shows an in-progress story, resume that one.
 
 ### Before Starting Work
 
@@ -186,17 +209,25 @@ Update progress.txt "Current Work" section with story ID, timestamp, and plan.
 3. If you discover a gotcha, IMMEDIATELY append to Learnings
 4. If blocked 3+ times, append to Blockers
 
-### After Completing a Story
+### After Completing the Story
 
 1. Run ALL verification commands from the PRD
 2. If all pass: update PRD (`passes: true`), commit, update progress.txt
 3. Clear "Current Work" section
 
-## Completion Signal
+## Completion Signals - STOP AFTER OUTPUTTING
 
-When ALL stories in the PRD have `passes: true`:
+**After completing ONE story (more stories remain):**
+```
+<story-complete>STORY_ID</story-complete>
+```
+Then STOP. Do not continue.
 
+**When ALL stories have `passes: true`:**
+```
 <promise>PHASE_COMPLETE</promise>
+```
+Then STOP. The phase is done.
 
 Only output this when it is genuinely TRUE. Do not lie to exit the loop.
 ```
