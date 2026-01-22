@@ -47,6 +47,10 @@ echo "Downloading ralph.sh..."
 curl -sL "$REPO_URL/scripts/ralph.sh" -o "scripts/ralph.sh"
 chmod +x scripts/ralph.sh
 
+# Download workflow reference
+echo "Downloading workflow reference..."
+curl -sL "$REPO_URL/README.md" -o "ralph-specs/WORKFLOW.md"
+
 # Create .gitkeep files
 touch ralph-specs/specs/.gitkeep ralph-specs/docs/.gitkeep ralph-specs/prompts/.gitkeep
 
