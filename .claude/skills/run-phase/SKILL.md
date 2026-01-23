@@ -136,36 +136,39 @@ Think of it as a relay race - you run ONE leg, pass the baton, and a fresh runne
 
 5. Clear the Current Work section
 
-## SIGNALS - OUTPUT ONE AND STOP
+## CRITICAL: COMPLETION SIGNALS
+
+When you complete a story or phase, you MUST write a signal file. This is more reliable than stdout.
 
 **After completing ONE story (more remain):**
+```bash
+echo 'STORY_COMPLETE:STORY_ID' > .ralph-signal
 ```
-<story-complete>STORY_ID</story-complete>
-```
+Then output `<story-complete>STORY_ID</story-complete>` and STOP.
 
 **When ALL stories have passes=true:**
+```bash
+echo 'PHASE_COMPLETE' > .ralph-signal
 ```
-<promise>PHASE_COMPLETE</promise>
-```
+Then output `<promise>PHASE_COMPLETE</promise>` and STOP.
 
 **When you need fresh context MID-STORY:**
+```bash
+echo 'YIELD:Brief reason' > .ralph-signal
 ```
-<yield>Brief reason - what you tried, where you're stuck</yield>
-```
+Then output `<yield>reason</yield>` and STOP.
 
-Use `<yield>` when:
-- You've tried multiple approaches without success
-- The story is complex and you've made partial progress
-- Context is getting long and you want fresh perspective
-- You're going in circles
+Use signal files when:
+- You've completed a story
+- All stories pass (phase complete)
+- You need fresh context
 
 Before yielding:
 1. Update progress.txt 'Current Work' with what you've tried
 2. Commit any stable partial work
 3. Be specific about where you're stuck
 
-A fresh iteration will read your notes and continue.
-
+Write the signal file BEFORE your final message. The shell monitors this file.
 Do NOT continue after outputting any signal. STOP immediately." --max-iterations 30 --completion-promise "PHASE_COMPLETE"
 ```
 
@@ -229,28 +232,31 @@ Update progress.txt "Current Work" section with story ID, timestamp, and plan.
 2. If all pass: update PRD (`passes: true`), commit, update progress.txt
 3. Clear "Current Work" section
 
-## Signals - OUTPUT ONE AND STOP
+## CRITICAL: Completion Signals
+
+When you complete a story or phase, you MUST write a signal file. This is more reliable than stdout.
 
 **After completing ONE story (more stories remain):**
+```bash
+echo "STORY_COMPLETE:STORY_ID" > .ralph-signal
 ```
-<story-complete>STORY_ID</story-complete>
-```
-Then STOP. Fresh context handles next story.
+Then output `<story-complete>STORY_ID</story-complete>` and STOP.
 
 **When ALL stories have `passes: true`:**
+```bash
+echo "PHASE_COMPLETE" > .ralph-signal
 ```
-<promise>PHASE_COMPLETE</promise>
-```
-Then STOP. Phase is complete.
+Then output `<promise>PHASE_COMPLETE</promise>` and STOP.
 
 **When stuck or need fresh context MID-STORY:**
-```
-<yield>What you tried, where you're stuck</yield>
+```bash
+echo "YIELD:What you tried, where you're stuck" > .ralph-signal
 ```
 Before yielding: update progress.txt with detailed notes, commit any stable partial work.
 Then STOP. Fresh context will read your notes and continue.
 
-Only output this when it is genuinely TRUE. Do not lie to exit the loop.
+Write the signal file BEFORE your final message. The shell monitors this file.
+Only output signals when genuinely TRUE. Do not lie to exit the loop.
 ```
 
 2. Run the bash script:

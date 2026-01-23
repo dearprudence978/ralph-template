@@ -1,0 +1,23 @@
+# Viewing Ralph Loop Logs
+
+Run these commands in a separate terminal to monitor a running Ralph loop:
+
+## Watch the latest log file (recommended)
+```bash
+tail -f "$(ls -t .claude/ralph-logs/run_*.log | head -1)"
+```
+
+## Watch with progress status
+```bash
+watch -n 10 'echo "=== RALPH LOG ===" && cat "$(ls -t .claude/ralph-logs/run_*.log | head -1)" && echo "" && echo "=== CURRENT WORK ===" && grep -A15 "## Current Work" ralph-specs/progress.txt'
+```
+
+## One-off status check
+```bash
+cat "$(ls -t .claude/ralph-logs/run_*.log | head -1)" && echo "---" && grep -A10 "## Current Work" ralph-specs/progress.txt
+```
+
+## Check story completion status
+```bash
+cat ralph-specs/prd-phase-*.json | jq '.userStories[] | {id, title, passes}'
+```
