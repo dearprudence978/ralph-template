@@ -14,9 +14,18 @@ Based on [Geoffrey Huntley's Ralph Wiggum technique](https://github.com/ghuntley
 
 ## Quick Setup
 
-### Option 1: Global Setup Skill (Recommended)
+### Option 1: Curl Installation (Recommended)
 
-If you have the `setup-ralph` skill installed globally:
+```bash
+cd your-repo
+curl -sL https://raw.githubusercontent.com/dearprudence978/ralph-template/main/install.sh | bash
+```
+
+This downloads all skills, scripts, and configures sandbox permissions automatically.
+
+### Option 2: Setup Skill
+
+If you have the `setup-ralph` skill installed:
 
 ```bash
 cd your-repo
@@ -24,7 +33,7 @@ cd your-repo
 /setup-ralph
 ```
 
-### Option 2: Manual Installation
+### Option 3: Manual Installation
 
 ```bash
 # Clone this template
@@ -32,15 +41,9 @@ git clone https://github.com/dearprudence978/ralph-template.git
 
 # Copy to your project
 cp -r ralph-template/.claude/skills/* your-repo/.claude/skills/
+cp ralph-template/.claude/settings.json your-repo/.claude/settings.json
 cp -r ralph-template/scripts your-repo/
 mkdir -p your-repo/ralph-specs/{specs,docs,prompts}
-```
-
-### Option 3: Curl Installation
-
-```bash
-cd your-repo
-curl -sL https://raw.githubusercontent.com/dearprudence978/ralph-template/main/install.sh | bash
 ```
 
 ## Included Skills
@@ -50,7 +53,7 @@ curl -sL https://raw.githubusercontent.com/dearprudence978/ralph-template/main/i
 | spec-to-prd | `/spec-to-prd` | Transform feature ideas into specs and phased PRDs |
 | run-phase | `/run-phase <prd-file>` | Execute a PRD phase with git branching |
 | close-phase | `/close-phase <prd-file>` | Verify completion and merge to development |
-| setup-ralph | `/setup-ralph` | Install Ralph into a new repository |
+| setup-ralph | `/setup-ralph` | Install/update Ralph in a repository |
 
 ## Workflow
 
@@ -61,7 +64,7 @@ curl -sL https://raw.githubusercontent.com/dearprudence978/ralph-template/main/i
    ├── Generate technical specification
    └── Create phased PRD with user stories
 
-2. /run-phase prd-phase-1-*.json
+2. /run-phase prd-phase-1-*.json [--isolated]
    ├── Create feature branch
    ├── Ralph loop: read progress → implement → update progress
    ├── Each story: implement → verify → commit
@@ -76,28 +79,206 @@ curl -sL https://raw.githubusercontent.com/dearprudence978/ralph-template/main/i
 
 ## Directory Structure
 
-After running `/spec-to-prd`:
+After installation and running `/spec-to-prd`:
 
 ```
 your-repo/
 ├── .claude/
+│   ├── settings.json          # Sandbox + permission guardrails
 │   └── skills/
 │       ├── spec-to-prd/
 │       │   ├── SKILL.md
 │       │   └── references/
 │       ├── run-phase/
 │       │   └── SKILL.md
-│       └── close-phase/
+│       ├── close-phase/
+│       │   └── SKILL.md
+│       └── setup-ralph/
 │           └── SKILL.md
 ├── scripts/
-│   └── ralph.sh           # Context-isolated iteration runner
+│   └── ralph.sh               # Context-isolated iteration runner
 └── ralph-specs/
-    ├── specs/             # Technical specifications
-    ├── docs/              # Completion reports
-    ├── prompts/           # Phase prompts (for --isolated mode)
-    ├── progress.txt       # Relay baton state file
-    └── prd-phase-*.json   # Phase PRD files
+    ├── specs/                  # Technical specifications
+    ├── docs/                   # Completion reports
+    ├── prompts/                # Phase prompts (for --isolated mode)
+    ├── progress.txt            # Relay baton state file
+    └── prd-phase-*.json        # Phase PRD files
 ```
+
+## Permission Model
+
+Ralph uses a **sandbox + deny/ask** approach for autonomous operation without `--dangerously-skip-permissions`.
+
+### How It Works
+
+The installer creates `.claude/settings.json` (project-level, checked into your repo):
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": ["docker"],
+    "network": {
+      "allowUnixSockets": ["/var/run/docker.sock"]
+    }
+  },
+  "permissions": {
+    "allow": ["WebSearch", "WebFetch", "Read", "Edit", "Write", "Bash"],
+    "deny": [ ... ],
+    "ask": [ ... ]
+  }
+}
+```
+
+| Layer | What it does | Example |
+|-------|--------------|---------|
+| **Sandbox** | Auto-approve all Bash commands in sandboxed env | Ralph loop runs without prompts |
+| **Allow** | Broad tool-level permissions | `Bash`, `Read`, `Edit`, `Write` |
+| **Deny** | Block destructive operations (always enforced) | `git push --force`, `git reset --hard` |
+| **Ask** | Require human approval for risky-but-needed ops | `git push`, `git merge` |
+
+### Configuring for Your Branch Strategy
+
+The default `settings.json` protects `main` and `development` branches. **You should customise the deny and ask lists to match your branching strategy.**
+
+#### Example: `development` → `main` Flow
+
+This is the default configuration, suitable for teams using a staging branch:
+
+```
+feature/phase-X → development → main
+                  (staging)     (production)
+```
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": ["docker"],
+    "network": {
+      "allowUnixSockets": ["/var/run/docker.sock"]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Read",
+      "Edit",
+      "Write",
+      "Bash"
+    ],
+    "deny": [
+      "Bash(git branch -d development)",
+      "Bash(git branch -D development)",
+      "Bash(git branch -d main)",
+      "Bash(git branch -D main)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(docker run -v /mnt/c*)",
+      "Bash(docker run -v /mnt/d/*)",
+      "Bash(docker run -v ~*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(git checkout development*)",
+      "Bash(git checkout main*)",
+      "Bash(git switch development*)",
+      "Bash(git switch main*)"
+    ]
+  }
+}
+```
+
+**What this does:**
+- Ralph can freely create feature branches, commit, and work autonomously
+- Deleting `main` or `development` is **blocked** (deny)
+- Force push and hard reset are **blocked** (deny)
+- Pushing, merging, and checking out protected branches **requires approval** (ask)
+- Docker volume mounts from host filesystem are **blocked** (deny)
+
+#### Example: `main`-Only Flow
+
+For simpler projects with just a `main` branch:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Bash(git branch -d main)",
+      "Bash(git branch -D main)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(git checkout main*)",
+      "Bash(git switch main*)"
+    ]
+  }
+}
+```
+
+#### Example: GitFlow (`develop` / `release` / `main`)
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Bash(git branch -d develop)",
+      "Bash(git branch -D develop)",
+      "Bash(git branch -d main)",
+      "Bash(git branch -D main)",
+      "Bash(git branch -d release*)",
+      "Bash(git branch -D release*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(git checkout develop*)",
+      "Bash(git checkout main*)",
+      "Bash(git checkout release*)",
+      "Bash(git switch develop*)",
+      "Bash(git switch main*)",
+      "Bash(git switch release*)"
+    ]
+  }
+}
+```
+
+#### Adding Your Own Rules
+
+The pattern syntax supports wildcards:
+
+```
+"Bash(git push*)"          # Matches any git push command
+"Bash(git branch -D main)" # Matches exact command only
+"Bash(docker run -v ~*)"   # Matches docker volume mounts from home dir
+```
+
+**Deny** always wins over allow. **Ask** takes precedence over sandbox auto-approve. Use deny for operations that should never happen, and ask for operations that need a human decision.
+
+### Two Settings Files
+
+| File | Scope | Git | Purpose |
+|------|-------|-----|---------|
+| `.claude/settings.json` | Project | Checked in | Shared team guardrails |
+| `.claude/settings.local.json` | User | Gitignored | Per-user overrides and accumulated permissions |
+
+`settings.local.json` is automatically created by Claude Code as you approve commands during sessions. You don't need to manage it manually.
 
 ## Key Concepts
 
@@ -126,22 +307,6 @@ Each PRD contains:
 - `verificationCommands` - Commands to verify each story
 - `passes` - Boolean flag (set to true when story completes)
 - `dependsOn` - Story dependencies
-
-## Recommended Permissions
-
-Add to your `.claude/settings.local.json`:
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "Bash(./scripts/ralph.sh:*)",
-      "Bash(git checkout:*)",
-      "Bash(git merge:*)"
-    ]
-  }
-}
-```
 
 ## References
 

@@ -22,7 +22,7 @@ fi
 # Create directories
 echo "Creating directories..."
 mkdir -p .claude/skills/spec-to-prd/references
-mkdir -p .claude/skills/run-phase
+mkdir -p .claude/skills/run-phase/references
 mkdir -p .claude/skills/close-phase
 mkdir -p scripts
 mkdir -p ralph-specs/specs ralph-specs/docs ralph-specs/prompts
@@ -37,10 +37,16 @@ done
 # Download run-phase skill
 echo "Downloading run-phase skill..."
 curl -sL "$REPO_URL/.claude/skills/run-phase/SKILL.md" -o ".claude/skills/run-phase/SKILL.md"
+curl -sL "$REPO_URL/.claude/skills/run-phase/references/viewlogs.txt" -o ".claude/skills/run-phase/references/viewlogs.txt"
 
 # Download close-phase skill
 echo "Downloading close-phase skill..."
 curl -sL "$REPO_URL/.claude/skills/close-phase/SKILL.md" -o ".claude/skills/close-phase/SKILL.md"
+
+# Download setup-ralph skill (self-referencing for future updates)
+echo "Downloading setup-ralph skill..."
+mkdir -p .claude/skills/setup-ralph
+curl -sL "$REPO_URL/.claude/skills/setup-ralph/SKILL.md" -o ".claude/skills/setup-ralph/SKILL.md"
 
 # Download ralph.sh
 echo "Downloading ralph.sh..."
@@ -54,47 +60,43 @@ curl -sL "$REPO_URL/README.md" -o "ralph-specs/WORKFLOW.md"
 # Create .gitkeep files
 touch ralph-specs/specs/.gitkeep ralph-specs/docs/.gitkeep ralph-specs/prompts/.gitkeep
 
-# Create settings.local.json if it doesn't exist
-if [ ! -f ".claude/settings.local.json" ]; then
-    echo "Creating .claude/settings.local.json..."
-    cat > .claude/settings.local.json << 'SETTINGS'
-{
-  "permissions": {
-    "allow": [
-      "Bash(./scripts/ralph.sh*)",
-      "Bash(make *)",
-      "Bash(npm *)",
-      "Bash(docker compose*)",
-      "Bash(git add*)",
-      "Bash(git commit*)",
-      "Bash(git status*)",
-      "Bash(git log*)",
-      "Bash(git diff*)",
-      "Bash(git branch*)",
-      "Bash(curl*)"
-    ],
-    "ask": [
-      "Bash(git push*)",
-      "Bash(git merge*)",
-      "Bash(git checkout development*)",
-      "Bash(git checkout main*)",
-      "Bash(git switch development*)",
-      "Bash(git switch main*)"
-    ],
-    "deny": [
-      "Bash(git push --force*)",
-      "Bash(git push -f*)",
-      "Bash(git reset --hard*)",
-      "Bash(git branch -d development)",
-      "Bash(git branch -D development)",
-      "Bash(git branch -d main)",
-      "Bash(git branch -D main)"
-    ]
-  }
-}
-SETTINGS
+# --- Settings Configuration ---
+# Ralph uses TWO settings files:
+#   .claude/settings.json       - Project-level (checked into repo), sandbox + broad permissions
+#   .claude/settings.local.json - User-level (gitignored), accumulated per-user permissions
+#
+# The settings.json provides sandbox mode so Ralph can run autonomously.
+# The deny/ask lists protect against destructive operations.
+
+echo "Configuring settings..."
+
+# Download and install settings.json (project-level)
+if [ ! -f ".claude/settings.json" ]; then
+    echo "Creating .claude/settings.json (project-level sandbox permissions)..."
+    curl -sL "$REPO_URL/.claude/settings.json" -o ".claude/settings.json"
 else
-    echo "Settings file already exists, skipping..."
+    echo "Existing .claude/settings.json found. Checking for Ralph settings..."
+    # Check if sandbox is already configured
+    if grep -q '"autoAllowBashIfSandboxed"' .claude/settings.json 2>/dev/null; then
+        echo "  Sandbox already configured, skipping settings.json update."
+    else
+        echo "  Settings.json exists but lacks sandbox config."
+        echo "  Downloading Ralph settings to .claude/settings.ralph.json for manual merge..."
+        curl -sL "$REPO_URL/.claude/settings.json" -o ".claude/settings.ralph.json"
+        echo ""
+        echo "  ACTION REQUIRED: Merge .claude/settings.ralph.json into .claude/settings.json"
+        echo "  Key sections to add:"
+        echo "    - sandbox.enabled: true"
+        echo "    - sandbox.autoAllowBashIfSandboxed: true"
+        echo "    - permissions.deny: [destructive git commands]"
+        echo "    - permissions.ask: [push, merge, checkout main/development]"
+    fi
+fi
+
+# Remove old settings.local.json if it only contains Ralph defaults
+# (settings.json now handles this at project level)
+if [ -f ".claude/settings.local.json" ]; then
+    echo "  Note: .claude/settings.local.json exists (user-level overrides preserved)."
 fi
 
 echo ""
@@ -102,19 +104,21 @@ echo "Ralph workflow installed successfully!"
 echo ""
 echo "Installed:"
 echo "  Skills:"
-echo "    /spec-to-prd  - Create specifications and PRDs from feature ideas"
-echo "    /run-phase    - Execute PRD phases with git branching"
-echo "    /close-phase  - Verify and merge completed phases"
+echo "    /spec-to-prd   - Create specifications and PRDs from feature ideas"
+echo "    /run-phase     - Execute PRD phases with git branching"
+echo "    /close-phase   - Verify and merge completed phases"
+echo "    /setup-ralph   - Reinstall/update Ralph workflow"
 echo ""
 echo "  Files:"
-echo "    scripts/ralph.sh            - Context-isolated iteration runner"
-echo "    ralph-specs/WORKFLOW.md     - Quick reference guide"
-echo "    .claude/settings.local.json - Permissions for autonomous operation"
+echo "    scripts/ralph.sh           - Context-isolated iteration runner"
+echo "    ralph-specs/WORKFLOW.md    - Quick reference guide"
+echo "    .claude/settings.json     - Sandbox + permission guardrails (project-level)"
 echo ""
-echo "Permissions configured:"
-echo "  ✓ Ralph loop can run autonomously"
-echo "  ✓ Git push/merge/checkout to main branches requires approval"
-echo "  ✓ Dangerous git operations (force push, hard reset) are blocked"
+echo "Permission model:"
+echo "  Sandbox:  autoAllowBashIfSandboxed = true (autonomous operation)"
+echo "  Deny:     Force push, hard reset, delete main/development branches"
+echo "  Ask:      Push, merge, rebase, checkout main/development"
+echo "  Allow:    All other Bash, Read, Edit, Write, WebSearch, WebFetch"
 echo ""
 echo "Next steps:"
 echo "  1. Run /spec-to-prd to create your first specification"

@@ -1,0 +1,43 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "excludedCommands": ["docker"],
+    "network": {
+      "allowUnixSockets": ["/var/run/docker.sock"]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "Read",
+      "Edit",
+      "Write",
+      "Bash"
+    ],
+    "deny": [
+      "Bash(git branch -d development)",
+      "Bash(git branch -D development)",
+      "Bash(git branch -d main)",
+      "Bash(git branch -D main)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(docker run -v /mnt/c*)",
+      "Bash(docker run -v /mnt/d/*)",
+      "Bash(docker run -v ~*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(git rebase*)",
+      "Bash(git checkout development*)",
+      "Bash(git checkout main*)",
+      "Bash(git switch development*)",
+      "Bash(git switch main*)"
+    ]
+  }
+}
