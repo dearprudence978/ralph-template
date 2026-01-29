@@ -1,6 +1,6 @@
 # PRD JSON Schema Reference
 
-Complete JSON schema specification for `ralph-specs/prd.json`.
+Complete JSON schema specification for `ralph-specs/prd-phase-{N}-{feature-slug}.json`.
 
 ---
 
@@ -25,8 +25,8 @@ Complete JSON schema specification for `ralph-specs/prd.json`.
     },
     "branchName": {
       "type": "string",
-      "pattern": "^ralph/[a-z0-9-]+$",
-      "description": "Git branch name for this feature"
+      "pattern": "^feature/phase-[0-9]+-[a-z0-9-]+$",
+      "description": "Git branch name derived from PRD filename: feature/phase-{N}-{slug}"
     },
     "description": {
       "type": "string",
@@ -157,17 +157,17 @@ Complete JSON schema specification for `ralph-specs/prd.json`.
 
 ### View All Stories
 ```bash
-cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '.userStories[] | {id, title, passes}'
 ```
 
 ### Count Remaining Stories
 ```bash
-cat ralph-specs/prd.json | jq '[.userStories[] | select(.passes == false)] | length'
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '[.userStories[] | select(.passes == false)] | length'
 ```
 
 ### Get Next Story to Work On
 ```bash
-cat ralph-specs/prd.json | jq '
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '
   .userStories
   | map(select(.passes == false))
   | sort_by(.priority)
@@ -177,7 +177,7 @@ cat ralph-specs/prd.json | jq '
 
 ### Check Stories Blocked by Dependencies
 ```bash
-cat ralph-specs/prd.json | jq '
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '
   .userStories
   | map(select(.passes == false and (.dependsOn | length > 0)))
   | .[] | {id, dependsOn}
@@ -186,22 +186,22 @@ cat ralph-specs/prd.json | jq '
 
 ### Get Completed Stories
 ```bash
-cat ralph-specs/prd.json | jq '.userStories[] | select(.passes == true) | {id, title}'
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '.userStories[] | select(.passes == true) | {id, title}'
 ```
 
 ### View Story Notes
 ```bash
-cat ralph-specs/prd.json | jq '.userStories[] | select(.notes != "") | {id, notes}'
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '.userStories[] | select(.notes != "") | {id, notes}'
 ```
 
 ### Get Stories by Category
 ```bash
-cat ralph-specs/prd.json | jq '.userStories[] | select(.category == "api") | {id, title}'
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '.userStories[] | select(.category == "api") | {id, title}'
 ```
 
 ### Summary Stats
 ```bash
-cat ralph-specs/prd.json | jq '{
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '{
   total: (.userStories | length),
   completed: ([.userStories[] | select(.passes == true)] | length),
   remaining: ([.userStories[] | select(.passes == false)] | length)
@@ -215,27 +215,27 @@ cat ralph-specs/prd.json | jq '{
 ### Mark Story Complete (via jq)
 ```bash
 # Mark AUTH-001 as complete
-cat ralph-specs/prd.json | jq '
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '
   .userStories |= map(
     if .id == "AUTH-001" then .passes = true else . end
   )
-' > ralph-specs/prd.json.tmp && mv ralph-specs/prd.json.tmp ralph-specs/prd.json
+' > ralph-specs/prd-phase-{N}-{name}.json.tmp && mv ralph-specs/prd-phase-{N}-{name}.json.tmp ralph-specs/prd-phase-{N}-{name}.json
 ```
 
 ### Add Notes to Story
 ```bash
-cat ralph-specs/prd.json | jq '
+cat ralph-specs/prd-phase-{N}-{name}.json | jq '
   .userStories |= map(
     if .id == "AUTH-001" then .notes = "Implemented with bcrypt" else . end
   )
-' > ralph-specs/prd.json.tmp && mv ralph-specs/prd.json.tmp ralph-specs/prd.json
+' > ralph-specs/prd-phase-{N}-{name}.json.tmp && mv ralph-specs/prd-phase-{N}-{name}.json.tmp ralph-specs/prd-phase-{N}-{name}.json
 ```
 
 ### Update Timestamp
 ```bash
-cat ralph-specs/prd.json | jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
+cat ralph-specs/prd-phase-{N}-{name}.json | jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
   .updatedAt = $now
-' > ralph-specs/prd.json.tmp && mv ralph-specs/prd.json.tmp ralph-specs/prd.json
+' > ralph-specs/prd-phase-{N}-{name}.json.tmp && mv ralph-specs/prd-phase-{N}-{name}.json.tmp ralph-specs/prd-phase-{N}-{name}.json
 ```
 
 ---
@@ -246,4 +246,4 @@ cat ralph-specs/prd.json | jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '
 2. **Keep IDs immutable** - Don't rename story IDs mid-implementation
 3. **Add notes liberally** - Document decisions and learnings
 4. **Update timestamps** - Track when changes occur
-5. **Validate JSON** - Use `jq '.' ralph-specs/prd.json` to check syntax
+5. **Validate JSON** - Use `jq '.' ralph-specs/prd-phase-{N}-{name}.json` to check syntax

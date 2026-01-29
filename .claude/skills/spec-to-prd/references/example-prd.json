@@ -1,7 +1,7 @@
 {
   "project": "User Authentication",
   "specId": "AUTH",
-  "branchName": "ralph/AUTH-user-authentication",
+  "branchName": "feature/phase-1-user-authentication",
   "description": "Complete user authentication system with email/password login, password reset, and session management",
   "specFile": "specs/AUTH-user-authentication.md",
   "userStories": [

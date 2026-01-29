@@ -14,7 +14,7 @@ This skill follows a four-phase process:
 1. **Discovery Phase**: Gather requirements through targeted questions
 2. **Codebase Analysis**: Scan the repo to discover patterns and conventions
 3. **Spec Generation**: Create comprehensive technical specification  
-4. **PRD Decomposition**: Split spec into user stories tracked via `prd.json`
+4. **PRD Decomposition**: Split spec into user stories tracked via `prd-phase-{N}-{name}.json`
 
 ---
 
@@ -214,17 +214,36 @@ Use a short, unique identifier: `AUTH`, `NOTIF`, `DASH`, `PAY`, `API`, etc.
 
 ## Phase 4: PRD Decomposition with JSON Tracking
 
-Split the spec into user stories tracked in a master `prd.json` file.
+Split the spec into user stories tracked in a phase PRD file.
 
-### Generate prd.json
+### File Naming Convention
 
-Create `ralph-specs/prd.json`:
+PRD files MUST follow this naming pattern to work with `/run-phase` and `/close-phase`:
+
+```
+ralph-specs/prd-phase-{N}-{feature-slug}.json
+```
+
+Where:
+- `{N}` is the phase number (1, 2, 3...). Ask the user or check existing `prd-phase-*.json` files to determine the next number.
+- `{feature-slug}` is a kebab-case name for the feature (e.g., `authentication`, `infrastructure`, `billing`)
+
+**Examples:**
+- `ralph-specs/prd-phase-1-infrastructure.json`
+- `ralph-specs/prd-phase-2-authentication.json`
+- `ralph-specs/prd-phase-3-billing.json`
+
+The branch name is derived from the filename: `prd-phase-1-infrastructure.json` → `feature/phase-1-infrastructure`
+
+### Generate Phase PRD File
+
+Create `ralph-specs/prd-phase-{N}-{feature-slug}.json`:
 
 ```json
 {
   "project": "[Feature Name]",
   "specId": "[SPEC_ID]",
-  "branchName": "ralph/[SPEC_ID]-[feature-slug]",
+  "branchName": "feature/phase-{N}-{feature-slug}",
   "description": "[Brief description of the feature]",
   "specFile": "specs/[SPEC_ID]-[feature-slug].md",
   "userStories": [
@@ -306,7 +325,7 @@ Codebase Analysis:
 
 Generated Files:
 - Spec: ralph-specs/specs/[SPEC_ID]-[name].md
-- PRD: ralph-specs/prd.json
+- PRD: ralph-specs/prd-phase-{N}-{feature-slug}.json
 - Progress: ralph-specs/progress.txt
 
 User Stories: [N] total
@@ -320,23 +339,10 @@ Dependencies:
 
 Ready to Run Ralph:
 
-/ralph-loop "Read ralph-specs/prd.json and implement user stories in priority order. 
-
-For each story where passes=false and dependencies are met:
-1. Read ralph-specs/progress.txt for codebase patterns
-2. Implement the requirements in the specified files
-3. Run verification commands to confirm completion
-4. If all acceptance criteria pass, update passes to true in prd.json
-5. Add implementation notes to the story's notes field
-6. Append any new learnings to ralph-specs/progress.txt
-7. Commit with message '[STORY_ID]: [title]'
-
-If blocked after 3 attempts, document the blocker in notes and continue.
-
-Output <promise>ALL_STORIES_COMPLETE</promise> when all stories have passes=true." --max-iterations 50 --completion-promise "ALL_STORIES_COMPLETE"
+/run-phase prd-phase-{N}-{feature-slug}.json
 
 Check Progress:
-cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
+cat ralph-specs/prd-phase-{N}-{feature-slug}.json | jq '.userStories[] | {id, title, passes}'
 ```
 
 ---
@@ -352,7 +358,7 @@ cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
 
 ## Best Practices
 
-1. **JSON as Source of Truth**: `prd.json` is the master tracking file
+1. **JSON as Source of Truth**: `prd-phase-{N}-{name}.json` is the master tracking file per phase
 2. **Atomic Stories**: Each story should be independently completable
 3. **Testable Criteria**: Every criterion must be verifiable via commands
 4. **Dependency Clarity**: Use `dependsOn` to prevent premature story execution

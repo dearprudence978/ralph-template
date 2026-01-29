@@ -24,11 +24,11 @@ A complete guide to setting up an autonomous development workflow using the Ralp
 ## Understanding the Workflow
 
 ```
-Feature Idea → Codebase Analysis → Spec → prd.json + progress.txt → Ralph Loop → Done
+Feature Idea → Codebase Analysis → Spec → prd-phase-{N}-{name}.json + progress.txt → Ralph Loop → Done
 ```
 
 **Key files:**
-- `prd.json` - Master tracking with `passes: true/false` per story
+- `prd-phase-{N}-{name}.json` - Master tracking with `passes: true/false` per story
 - `progress.txt` - Auto-populated codebase patterns + Ralph's learnings
 - `specs/*.md` - Generated specification documents
 
@@ -113,7 +113,7 @@ Create a spec for user authentication with email/password login and password res
 1. Ask discovery questions
 2. Analyze your codebase
 3. Generate `ralph-specs/specs/AUTH-user-auth.md`
-4. Generate `ralph-specs/prd.json`
+4. Generate `ralph-specs/prd-phase-1-user-auth.json`
 5. Generate `ralph-specs/progress.txt` (auto-populated)
 
 ### Review before running Ralph:
@@ -123,7 +123,7 @@ Create a spec for user authentication with email/password login and password res
 cat ralph-specs/specs/AUTH-user-auth.md
 
 # Check user stories
-cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
+cat ralph-specs/prd-phase-1-user-auth.json | jq '.userStories[] | {id, title, passes}'
 
 # Check discovered patterns
 cat ralph-specs/progress.txt
@@ -146,22 +146,13 @@ echo "
 ### Start the loop:
 
 ```
-/ralph-loop "Read ralph-specs/prd.json and implement user stories in priority order.
-
-For each story where passes=false and dependencies are met:
-1. Read ralph-specs/progress.txt for codebase patterns
-2. Implement requirements in specified files
-3. Run verification commands
-4. If criteria pass, update passes to true in prd.json
-5. Add notes and commit
-
-Output <promise>ALL_STORIES_COMPLETE</promise> when done." --max-iterations 50 --completion-promise "ALL_STORIES_COMPLETE"
+/run-phase prd-phase-1-user-auth.json
 ```
 
 ### Monitor progress:
 
 ```bash
-cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
+cat ralph-specs/prd-phase-1-user-auth.json | jq '.userStories[] | {id, title, passes}'
 ```
 
 ### Stop if needed:
@@ -172,13 +163,13 @@ cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
 
 ### Resume after interruption:
 
-Just run the same command again. Ralph reads `prd.json` and continues from incomplete stories.
+Just run the same command again. Ralph reads the PRD file and continues from incomplete stories.
 
 ---
 
 ## Part 7: JSON Tracking
 
-### prd.json structure:
+### PRD file structure:
 
 ```json
 {
@@ -207,13 +198,13 @@ Just run the same command again. Ralph reads `prd.json` and continues from incom
 
 ```bash
 # All stories with status
-cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
+cat ralph-specs/prd-phase-*.json | jq '.userStories[] | {id, title, passes}'
 
 # Count remaining
-cat ralph-specs/prd.json | jq '[.userStories[] | select(.passes == false)] | length'
+cat ralph-specs/prd-phase-*.json | jq '[.userStories[] | select(.passes == false)] | length'
 
 # See completed
-cat ralph-specs/prd.json | jq '.userStories[] | select(.passes == true)'
+cat ralph-specs/prd-phase-*.json | jq '.userStories[] | select(.passes == true)'
 ```
 
 ---
@@ -296,11 +287,11 @@ Add explicit paths to progress.txt:
 "Create a spec for [feature]"
 
 # Run Ralph
-/ralph-loop "..." --max-iterations 50 --completion-promise "ALL_STORIES_COMPLETE"
+/run-phase prd-phase-{N}-{feature-slug}.json
 
 # Check progress
-cat ralph-specs/prd.json | jq '.userStories[] | {id, title, passes}'
+cat ralph-specs/prd-phase-{N}-{feature-slug}.json | jq '.userStories[] | {id, title, passes}'
 
-# Stop
-/cancel-ralph
+# Close phase
+/close-phase prd-phase-{N}-{feature-slug}.json
 ```

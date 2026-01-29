@@ -1,6 +1,16 @@
 # PRD JSON Template
 
-This template shows the structure of `ralph-specs/prd.json`. Ralph reads this file to track implementation progress.
+This template shows the structure of `ralph-specs/prd-phase-{N}-{feature-slug}.json`. Ralph reads this file to track implementation progress.
+
+### File Naming Convention
+
+```
+ralph-specs/prd-phase-{N}-{feature-slug}.json
+```
+
+- `{N}` = phase number (1, 2, 3...)
+- `{feature-slug}` = kebab-case feature name
+- Branch derived from filename: `prd-phase-1-auth.json` → `feature/phase-1-auth`
 
 ---
 
@@ -10,7 +20,7 @@ This template shows the structure of `ralph-specs/prd.json`. Ralph reads this fi
 {
   "project": "[Feature Name]",
   "specId": "[SPEC_ID]",
-  "branchName": "ralph/[SPEC_ID]-[feature-slug]",
+  "branchName": "feature/phase-{N}-{feature-slug}",
   "description": "[Brief description of what this feature does]",
   "specFile": "specs/[SPEC_ID]-[feature-slug].md",
   "userStories": [
